@@ -96,6 +96,37 @@ public class NettyServerIntegrationTest {
         assertEquals("响应dataId应与请求一致", dataId, handler.getResponseDataId());
     }
 
+    @Test
+    public void testNettyServer_ValidData_alert() throws Exception {
+        // 1. 构建测试数据
+        String dataId = "TEST_" + System.currentTimeMillis();
+        RealTimeData realTimeData = buildTestRealTimeDataAlert(dataId);
+
+        // 2. 加密数据
+        String plainJson = JSON.toJSONString(realTimeData);
+        String encryptedData = AesUtils.encrypt(plainJson, AES_KEY, AES_IV);
+
+        // 3. 构建请求报文
+        AppRequest request = new AppRequest();
+        request.setAppId(APP_ID);
+        request.setServiceId(SERVICE_ID);
+        request.setDataId(dataId);
+        request.setData(encryptedData);
+        String requestMsg = JSON.toJSONString(request) + "@@"; // 添加分隔符
+
+        // 4. 发送请求并等待响应
+        CountDownLatch latch = new CountDownLatch(1);
+        ResponseHandler handler = new ResponseHandler(latch, dataId);
+
+        connectAndSend(requestMsg, handler);
+
+        // 等待响应（超时时间5秒）
+        boolean success = latch.await(5, TimeUnit.SECONDS);
+        assertTrue("服务端未在规定时间内响应", success);
+        assertTrue("响应状态应为成功", handler.isSuccess());
+        assertEquals("响应dataId应与请求一致", dataId, handler.getResponseDataId());
+    }
+
 
     /**
      * 连接Netty服务并发送数据
@@ -132,27 +163,97 @@ public class NettyServerIntegrationTest {
     private RealTimeData buildTestRealTimeData(String dataId) {
         RealTimeData data = new RealTimeData();
         data.setDataId(dataId);
-        data.setEnterpriseCode("KS2025001");
+        data.setEnterpriseCode("429021001003");
+        data.setEnterpriseName("湖北神农磷业科技有限公司寨湾磷矿");
         data.setEnterpriseType("DXK");
-        data.setGatewayCode("GW2025001");
-        data.setCollectTime("2025-11-13 16:30:00");
+        data.setGatewayCode("42902100100301");
+        data.setCollectTime("2025-11-21 14:13:00");
         data.setIsConnectDataSource(true);
         data.setReportType("report");
-        data.setDataType("01"); // 用电量数据类型
+        data.setDataType("04");
 
         // 添加测试数据项
         List<Map<String, Object>> datas = new ArrayList<>();
         Map<String, Object> item = new HashMap<>();
-        item.put("ksbh", "KS2025001");
-        item.put("powerCode", "DY2025001");
-        item.put("powerDate", "2025-11-13");
-        item.put("powerConsumption", 1560.89);
+        item.put("ksbh", "429021001003");
+        item.put("pointCode", "42902100100301MN0010000001");
+        item.put("sensorType", "0010");
+        item.put("pointLocation", "840节点机房");
+        item.put("pointValue", 20.41);
+        item.put("valueUnit","%");
+        item.put("pointStatus","00000000");
+        item.put("dataTime", "2025-11-13 16:30:00");
+        datas.add(item);
+        item = new HashMap<>();
+        item.put("ksbh", "429021001003");
+        item.put("pointCode", "42902100100301MN0010000001");
+        item.put("sensorType", "0010");
+        item.put("pointLocation", "C8上山南770平巷");
+        item.put("pointValue", 20.19);
+        item.put("valueUnit","%");
+        item.put("pointStatus","00000000");
         item.put("dataTime", "2025-11-13 16:30:00");
         datas.add(item);
         data.setDatas(datas);
 
         return data;
     }
+
+    private RealTimeData buildTestRealTimeDataAlert(String dataId) {
+        RealTimeData data = new RealTimeData();
+        data.setDataId(dataId);
+        data.setEnterpriseCode("429021001003");
+        data.setEnterpriseName("湖北神农磷业科技有限公司寨湾磷矿");
+        data.setEnterpriseType("DXK");
+        data.setGatewayCode("42902100100301");
+        data.setCollectTime("2025-11-21 14:13:00");
+        data.setIsConnectDataSource(true);
+        data.setReportType("report");
+        data.setDataType("1001");
+
+        // 添加测试数据项
+        List<Map<String, Object>> datas = new ArrayList<>();
+        Map<String, Object> item = new HashMap<>();
+        item.put("ksbh", "429021001003");
+        item.put("alarmStartTime", "2025-11-20 11:32:15");
+        item.put("alarmOverTime", "2025-11-20 13:22:45");
+        item.put("alarmLevel", 1);
+        item.put("alarmStatus", 0);
+        item.put("alarmType", 1);
+        item.put("relatedObj","417");
+        item.put("Alarmcode","2953");
+        item.put("alarmDesc", "蓝色告警：压力大于13.0MPa。\n");
+        datas.add(item);
+        data.setDatas(datas);
+
+        return data;
+    }
+//    [35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData appid : 3c9a6868a6d74e348708ad3f0c15c25b
+//[35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData serviceId : c6314bc9888b4134bc9e6b989dd37679
+//[35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData secretKey : 1234567890ABCDEF ,iv: 0000000000000000
+//            [35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData decryptedData :
+//            {"dataId":"b94da045-413c-49d9-8d92-dc808c00ed5a",
+//            "enterpriseCode":"429021001003",
+//            "enterpriseType":"DXK",
+//            "enterpriseName":"湖北神农磷业科技股份有限公司寨湾磷矿",
+//            "gatewayCode":"42902100100301","collectTime":"2025-11-20 16:20:17",
+//            "isConnectDataSource":true,
+//            "reportType":"report",
+//            "dataType":"1001","datas":[
+//            {
+//            "ksbh":"429021001003",
+//            "alarmStartTime":"2025-11-20 11:32:15",
+//            "alarmOverTime":"2025-11-20 13:22:45",
+//            "alarmLevel":1,
+//            "alarmStatus":0,
+//            "alarmType":1,
+//            "relatedObj":"417",
+//            "Alarmcode":"2953",
+//            "alarmDesc":"蓝色告警：压力大于13.0MPa。\n"}]}
+//[35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData realTimeData : RealTimeData(dataId=b94da045-413c-49d9-8d92-dc808c00ed5a, enterpriseCode=429021001003, enterpriseType=DXK, enterpriseName=湖北神农磷业科技股份有限公司寨湾磷矿, gatewayCode=42902100100301, collectTime=2025-11-20 16:20:17, isConnectDataSource=true, reportType=report, dataType=1001, datas=[{"alarmDesc":"蓝色告警：压力大于13.0MPa。\n","alarmStatus":0,"alarmType":1,"relatedObj":"417","alarmOverTime":"2025-11-20 13:22:45","alarmStartTime":"2025-11-20 11:32:15","alarmLevel":1,"ksbh":"429021001003","Alarmcode":"2953"}])
+//            [35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData dataType : 1001
+//            [35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.RealTimeDataHandler[0;39m processData datas : [{"alarmDesc":"蓝色告警：压力大于13.0MPa。\n","alarmStatus":0,"alarmType":1,"relatedObj":"417","alarmOverTime":"2025-11-20 13:22:45","alarmStartTime":"2025-11-20 11:32:15","alarmLevel":1,"ksbh":"429021001003","Alarmcode":"2953"}]
+//            [35m2025-11-20 16:20:17[0;39m [34mINFO [0;39m [32mcom.mines.server.handler.TcpLoggingHandler
 
     /**
      * 自定义响应处理器

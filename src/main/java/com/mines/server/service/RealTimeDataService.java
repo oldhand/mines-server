@@ -64,6 +64,9 @@ public class RealTimeDataService {
     @Autowired
     private SubstationRunDataRepository substationRunDataRepository;
 
+    @Autowired
+    private AlertDataRepository alertDataRepository;
+
     /**
      * 处理实时数据上报请求
      */
@@ -101,8 +104,7 @@ public class RealTimeDataService {
             List<?> datas = realTimeData.getDatas();
             log.info("processData dataType : {} ", dataType);
             log.info("processData datas : {} ", datas);
-            return AppResponse.success(dataId);
-            /*
+
             switch (dataType) {
                 case "01":
                     List<PowerData> powerDatas = JSON.parseArray(JSON.toJSONString(datas), PowerData.class);
@@ -164,11 +166,28 @@ public class RealTimeDataService {
                     ValidationUtils.validateSubstationRunData(substationDatas);
                     substationRunDataRepository.saveAll(substationDatas);
                     break;
+                case "1001":
+                    List<AlertData> alertDatas = JSON.parseArray(JSON.toJSONString(datas), AlertData.class);
+                    if (alertDatas != null && !alertDatas.isEmpty()) {
+                        // 简单校验必填项
+                        for (AlertData data : alertDatas) {
+                            if (data.getKsbh() == null || data.getKsbh().isEmpty()) {
+                                throw new IllegalArgumentException("AlertData.ksbh 不能为空");
+                            }
+                            if (data.getAlarmStartTime() == null) {
+                                throw new IllegalArgumentException("AlertData.alarmStartTime 不能为空");
+                            }
+                        }
+                        // 保存到数据库
+                        alertDataRepository.saveAll(alertDatas);
+                        log.info("成功保存 {} 条1001报警数据", alertDatas.size());
+                    }
+                    break;
                 default:
                     return AppResponse.fail("400", "INVALID_DATA_TYPE", "不支持的数据类型：" + dataType, dataId);
             }
 
-            return AppResponse.success(dataId);*/
+            return AppResponse.success(dataId);
         } catch (Exception e) {
             e.printStackTrace();
             return AppResponse.fail("400", "BUSINESS_ERROR", e.getMessage(), dataId);

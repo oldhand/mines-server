@@ -32,16 +32,24 @@ public class PointRealData {
     @ApiModelProperty(value = "测点名称", required = true, example = "井下温度传感器")
     private String pointName; // 测点名称
 
+    @Column(length = 4, nullable = false)
+    @ApiModelProperty(value = "传感器类型", required = true, example = "0010")
+    private String sensorType; // 传感器类型
+
     @Column(nullable = false)
     @ApiModelProperty(value = "测点值", required = true, example = "26.5", notes = "传感器采集的实时数值")
     private BigDecimal pointValue; // 测点值
 
+    @Column(length = 8, nullable = false)
+    @ApiModelProperty(value = "传感器状态", required = true, example = "00000000")
+    private String pointStatus; // 传感器状态
+
     @Column(length = 10, nullable = false)
     @ApiModelProperty(value = "单位", required = true, example = "℃", notes = "测点值的计量单位")
-    private String unit; // 单位
+    private String valueUnit; // 单位
 
     @Column(nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
     @ApiModelProperty(value = "采集时间", required = true, example = "2025-05-20 14:30:00")
-    private Date collectTime; // 采集时间
+    private Date dataTime; // 采集时间
 }
